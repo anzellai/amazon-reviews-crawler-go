@@ -33,7 +33,7 @@ type review struct {
 	Comment   string `json:"comment"`
 }
 
-func crawl(productID, region string) []*review {
+func crawl(productID, region, ref string) []*review {
 	if productID == "" {
 		log.Println("Amazon Reviews Product ID required")
 		os.Exit(1)
@@ -70,7 +70,10 @@ func crawl(productID, region string) []*review {
 		}
 	})
 
-	startPage := fmt.Sprintf("https://www.amazon.%s/reviews/%s/ref=cm_cr_arp_d_product_top?ie=UTF8", region, productID)
+	startPage := fmt.Sprintf("https://www.amazon.%s/reviews/%s", region, productID)
+	if ref != "" {
+		startPage = startPage + "/ref=" + ref
+	}
 	log.Println("crawling first reviews page: ", startPage)
 	c.Visit(startPage)
 	c.Wait()
@@ -80,9 +83,11 @@ func crawl(productID, region string) []*review {
 func main() {
 	var (
 		region string
+		ref    string
 		out    string
 	)
 	flag.StringVar(&region, "region", "uk", "region or amazon domain suffix, eg. -region=uk")
+	flag.StringVar(&ref, "ref", "", "reference suffix querystring from amazon reviews page ending with /ref=...")
 	flag.StringVar(&out, "out", "", "JSON output to file, eg. -out=output.json")
 	flag.Parse()
 	log.Printf("amazon-reviews-crawler-go tool -- Version: %s, Commit: %s, Branch: %s\n", VERSION, COMMIT, BRANCH)
@@ -90,7 +95,7 @@ func main() {
 
 	var productReviews = make([]*review, 0)
 	for _, productID := range flag.Args() {
-		productReviews = append(productReviews, crawl(productID, region)...)
+		productReviews = append(productReviews, crawl(productID, region, ref)...)
 	}
 	if out == "" {
 		enc := json.NewEncoder(os.Stdout)
