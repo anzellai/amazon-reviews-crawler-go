@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"flag"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
@@ -17,6 +18,11 @@ var (
 	COMMIT string
 	// BRANCH for git branch
 	BRANCH string
+
+	regionMaps = map[string]string{
+		"uk": "co.uk",
+		"us": "com",
+	}
 )
 
 type review struct {
@@ -27,10 +33,13 @@ type review struct {
 	Comment   string `json:"comment"`
 }
 
-func crawl(productID string) []*review {
+func crawl(productID, region string) []*review {
 	if productID == "" {
 		log.Println("Amazon Reviews Product ID required")
 		os.Exit(1)
+	}
+	if regionSuffix, ok := regionMaps[region]; ok {
+		region = regionSuffix
 	}
 	reviews := make([]*review, 0)
 
@@ -61,7 +70,7 @@ func crawl(productID string) []*review {
 		}
 	})
 
-	startPage := "https://www.amazon.com/reviews/" + productID
+	startPage := fmt.Sprintf("https://www.amazon.%s/reviews/%s", region, productID)
 	log.Println("crawling first reviews page: ", startPage)
 	c.Visit(startPage)
 	c.Wait()
@@ -69,15 +78,19 @@ func crawl(productID string) []*review {
 }
 
 func main() {
-	var out string
+	var (
+		region string
+		out    string
+	)
+	flag.StringVar(&region, "region", "uk", "region or amazon domain suffix, eg. -region=uk")
 	flag.StringVar(&out, "out", "", "JSON output to file, eg. -out=output.json")
 	flag.Parse()
 	log.Printf("amazon-reviews-crawler-go tool -- Version: %s, Commit: %s, Branch: %s\n", VERSION, COMMIT, BRANCH)
-	log.Printf("crawling with product id(s): %v, output: %s\n", flag.Args(), out)
+	log.Printf("crawling on region: '%s' with product id(s): %v, output: %s\n", region, flag.Args(), out)
 
 	var productReviews = make([]*review, 0)
 	for _, productID := range flag.Args() {
-		productReviews = append(productReviews, crawl(productID)...)
+		productReviews = append(productReviews, crawl(productID, region)...)
 	}
 	if out == "" {
 		enc := json.NewEncoder(os.Stdout)
