@@ -70,7 +70,7 @@ func crawl(productID, region string) []*review {
 		}
 	})
 
-	startPage := fmt.Sprintf("https://www.amazon.%s/reviews/%s", region, productID)
+	startPage := fmt.Sprintf("https://www.amazon.%s/reviews/%s/ref=cm_cr_arp_d_product_top?ie=UTF8", region, productID)
 	log.Println("crawling first reviews page: ", startPage)
 	c.Visit(startPage)
 	c.Wait()
